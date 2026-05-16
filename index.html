@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能医疗问答助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 
+                         'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .logo-text h1 {
+            font-size: 24px;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .logo-text p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #f0f9ff;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #0369a1;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 主内容区域 */
+        .main-container {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 200px);
+        }
+
+        /* 聊天容器 */
+        .chat-wrapper {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 750px;
+            min-height: 750px;
+            margin-bottom: 30px;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-title h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* iframe 容器 */
+        .iframe-container {
+            flex: 1;
+            position: relative;
+            background: #f8fafc;
+            min-height: 600px;
+            overflow: hidden;
+        }
+
+        .chat-iframe {
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+            border: none;
+            display: block;
+        }
+
+        /* 加载动画 */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 10;
+            transition: opacity 0.3s;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* 提示信息区域 */
+        .info-section {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .info-card-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .info-card h3 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .info-card p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .info-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-card li {
+            padding: 8px 0;
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-card li:before {
+            content: "✓";
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        /* 免责声明 */
+        .disclaimer {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 16px 20px;
+            margin-top: 30px;
+            border-radius: 8px;
+        }
+
+        .disclaimer h4 {
+            color: #92400e;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .disclaimer p {
+            color: #78350f;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* 页脚 */
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            margin-top: 40px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .logo-section {
+                flex-direction: column;
+            }
+
+            .header-info {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .chat-wrapper {
+                height: 600px;
+                min-height: 600px;
+            }
+
+            .iframe-container {
+                min-height: 450px;
+            }
+
+            .chat-iframe {
+                min-height: 450px;
+            }
+
+            .chat-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .info-section {
+                grid-template-columns: 1fr;
+            }
+
+            .main-container {
+                margin: 20px auto;
+                min-height: calc(100vh - 150px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chat-wrapper {
+                height: 500px;
+                min-height: 500px;
+                border-radius: 12px;
+            }
+
+            .iframe-container {
+                min-height: 350px;
+            }
+
+            .chat-iframe {
+                min-height: 350px;
+            }
+
+            .logo-text h1 {
+                font-size: 20px;
+            }
+
+            .logo-text p {
+                font-size: 12px;
+            }
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">🏥</div>
+                <div class="logo-text">
+                    <h1>智能医疗问答助手</h1>
+                    <p>基于循证医学的专业用药咨询</p>
+                </div>
+            </div>
+            <div class="header-info">
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    <span>在线服务中</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容 -->
+    <main class="main-container">
+        <!-- 聊天窗口 -->
+        <div class="chat-wrapper">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <span style="font-size: 24px;">💬</span>
+                    <h2>在线咨询</h2>
+                </div>
+                <div class="chat-actions">
+                    <button class="action-btn" onclick="refreshChat()">🔄 刷新</button>
+                    <button class="action-btn" onclick="clearChat()">🗑️ 清空</button>
+                </div>
+            </div>
+            
+            <div class="iframe-container">
+                <!-- 加载动画 -->
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <div class="loading-text">正在加载聊天助手...</div>
+                </div>
+                
+                <!-- Dify 聊天机器人 iframe -->
+                <iframe 
+                    id="chatIframe"
+                    src="http://localhost/chatbot/zVaWI6pEYpJgtU2f" 
+                    class="chat-iframe"
+                    frameborder="0" 
+                    allow="microphone"
+                    onload="hideLoading()">
+                </iframe>
+            </div>
+        </div>
+
+        <!-- 信息卡片 -->
+        <div class="info-section">
+            <div class="info-card">
+                <div class="info-card-icon">📋</div>
+                <h3>服务范围</h3>
+                <ul>
+                    <li>超说明书用药咨询</li>
+                    <li>药物用法用量指导</li>
+                    <li>证据等级解读</li>
+                    <li>用药安全提醒</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <div class="info-card-icon">⚕️</div>
+                <h3>专业保障</h3>
+                <ul>
+                    <li>基于权威专家共识</li>
+                    <li>循证医学证据支持</li>
+                    <li>专业药师审核</li>
+                    <li>实时更新知识库</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <div class="info-card-icon">💡</div>
+                <h3>使用建议</h3>
+                <ul>
+                    <li>详细描述症状和问题</li>
+                    <li>提供完整用药历史</li>
+                    <li>紧急情况请立即就医</li>
+                    <li>建议仅供参考</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 免责声明 -->
+        <div class="disclaimer">
+            <h4>
+                <span>⚠️</span>
+                <span>重要声明</span>
+            </h4>
+            <p>
+                本智能问答系统基于《山东省超药品说明书用药专家共识（2021年版）》等权威医学文献，
+                提供的信息仅供参考，不能替代执业医师的面对面诊断和治疗建议。
+                如有紧急医疗情况，请立即拨打急救电话或前往医院就诊。
+                所有用药决策请在专业医师指导下进行。
+            </p>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>© 2026 智能医疗问答助手 | 基于 Dify 平台构建 | 仅供医疗专业人士参考</p>
+    </footer>
+
+    <script>
+        // 隐藏加载动画
+        function hideLoading() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+            }, 500);
+        }
+
+        // 刷新聊天
+        function refreshChat() {
+            const iframe = document.getElementById('chatIframe');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            // 显示加载动画
+            loadingOverlay.classList.remove('hidden');
+            
+            // 刷新 iframe
+            iframe.src = iframe.src;
+        }
+
+        // 清空聊天（重新加载）
+        function clearChat() {
+            if (confirm('确定要清空当前对话吗？')) {
+                refreshChat();
+            }
+        }
+
+        // 页面加载完成后的初始化
+        window.addEventListener('load', function() {
+            console.log('医疗问答助手已加载');
+            
+            // 设置最大加载时间，防止一直显示加载动画
+            setTimeout(() => {
+                hideLoading();
+            }, 5000);
+        });
+
+        // 监听 iframe 消息（如果 Dify 支持）
+        window.addEventListener('message', function(event) {
+            // 可以根据需要处理来自 iframe 的消息
+            console.log('收到消息:', event.data);
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + R 刷新
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                refreshChat();
+            }
+        });
+    </script>
+</body>
+</html>
